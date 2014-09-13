@@ -52,22 +52,17 @@ class Receiver {
 			{
 				if ($this->ipnForwarder->forwardIpn($ipn, $request))
 				{
-					$msg = 'Notified ' . count($ipn->getForwardUrls()) . ' urls.';
+					$response = $this->makeForwardedResponse($logData, $ipn);
 
 				}
 				else
 				{
-					$msg = 'No listener was found';
+					$response = $this->makeNotForwardedResponse($logData, $ipn);
 				}
-
-				$response = ['status' => 'ok', 'msg' => $msg];
-				$this->log($msg, $logData);
 			}
 			else
 			{
-				$msg = 'IpnEntity is invalid';
-				$response = ['status' => 'ok', 'msg' => $msg];
-				$this->log($msg, $logData);
+				$response = $this->makeErrorResponse($logData, $ipn);
 			}
 		}
 		return $response;
@@ -110,5 +105,45 @@ class Receiver {
 		{
 			$this->logger->info($message, $data);
 		}
+	}
+
+	/**
+	 * @param $logData
+	 * @param IpnEntity $ipn
+	 * @return array
+	 */
+	protected function makeErrorResponse($logData, $ipn)
+	{
+		$msg = 'IpnEntity is invalid';
+		$response = ['status' => 'ok', 'msg' => $msg];
+		$this->log($msg, $logData);
+		return $response;
+	}
+
+	/**
+	 * @param IpnEntity $ipn
+	 * @param $logData
+	 * @return array
+	 */
+	protected function makeForwardedResponse($logData, $ipn)
+	{
+		$msg = 'Notified ' . count($ipn->getForwardUrls()) . ' urls.';
+
+		$response = ['status' => 'ok', 'msg' => $msg];
+		$this->log($msg, $logData);
+		return $response;
+	}
+
+	/**
+	 * @param $logData
+	 * @param IpnEntity $ipn
+	 * @return array
+	 */
+	protected function makeNotForwardedResponse($logData, $ipn)
+	{
+		$msg = 'No listener was found';
+		$response = ['status' => 'ok', 'msg' => $msg];
+		$this->log($msg, $logData);
+		return $response;
 	}
 } 
