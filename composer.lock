@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "cc7c70bc1fe2a8c1979b89aee901ba80",
+    "hash": "7bf2f4943b331d87df909918549cff65",
     "packages": [
         {
             "name": "guzzlehttp/guzzle",
@@ -303,12 +303,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/support.git",
-                "reference": "0dbc57efbe75bc832c3b6c22a6e1e6e8891f0bf2"
+                "reference": "d4352ca092bc12c7e24bf389b6cc322ec77e043f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/illuminate/support/zipball/0dbc57efbe75bc832c3b6c22a6e1e6e8891f0bf2",
-                "reference": "0dbc57efbe75bc832c3b6c22a6e1e6e8891f0bf2",
+                "url": "https://api.github.com/repos/illuminate/support/zipball/d4352ca092bc12c7e24bf389b6cc322ec77e043f",
+                "reference": "d4352ca092bc12c7e24bf389b6cc322ec77e043f",
                 "shasum": ""
             },
             "require": {
@@ -343,7 +343,7 @@
                     "email": "taylorotwell@gmail.com"
                 }
             ],
-            "time": "2014-09-11 19:16:42"
+            "time": "2014-09-12 21:43:02"
         },
         {
             "name": "mike182uk/paypal-ipn-listener",
