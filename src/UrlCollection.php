@@ -2,9 +2,9 @@
 
 class UrlCollection {
 	/** @var  array */
-	private $forwardUrls = [];
-	protected $globalListeners = [];
-	private $matchedParts;
+	private $forwardUrls = [],
+		$globalListeners = [],
+		$matchedParts;
 
 	/**
 	 * @param array $urls

@@ -1,25 +1,22 @@
 <?php namespace IpnForwarder;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Stream\Stream;
 use Illuminate\Http\Request;
 use IpnForwarder\Format\JsonFormatter;
 use IpnForwarder\Format\SimpleFormatter;
 
 class Forwarder {
-	/**
-	 * @var \GuzzleHttp\Client
-	 */
+	/** @var \GuzzleHttp\Client */
 	private $guzzle;
-	/**
-	 * @var \Illuminate\Http\Request
-	 */
-	private $request;
 	/** @var  string */
 	private $customHeader = 'X-IpnEntity-FORWARDER', $key;
 	/** @var int */
 	protected $maxRequests = 15;
 	/** @var \IpnForwarder\Format\JsonFormatter */
 	protected $formatter;
+	/** @var array */
+	protected $disabledJsonFormatting = [];
 
 	public function __construct(Client $guzzle)
 	{
@@ -29,20 +26,36 @@ class Forwarder {
 
 	/**
 	 * @param IpnEntity $ipn
-	 * @param \Illuminate\Http\Request $request
+	 * @param \Illuminate\Http\Request $httpRequest
 	 * @return bool
 	 */
-	public function forwardIpn(IpnEntity $ipn, Request $request = null)
+	public function forwardIpn(IpnEntity $ipn, Request $httpRequest = null)
 	{
 		$urls = $ipn->getForwardUrls();
 		if (!empty($urls))
 		{
-			$this->send($urls, $this->formatter->formatJsonResponse($ipn, $request));
+			$requests = [];
+			foreach ($urls as $url)
+			{
+				$request = $this->guzzle->createRequest('post', $url);
+				if (in_array($url, $this->disabledJsonFormatting))
+				{
+					$request->getQuery()->merge($ipn->toArray());
+				}
+				else
+				{
+					$request->setHeader('content-type', 'application/json');
+					$response = $this->formatter->formatJsonResponse($ipn, $httpRequest);
+					$request->setBody(Stream::factory(json_encode($response)));
+				}
+				$request->setHeader($this->customHeader, $this->getKey());
+				$requests[] = $request;
+			}
+			$this->guzzle->sendAll($requests, ['parallel' => $this->maxRequests]);
 			return true;
 		}
 		return false;
 	}
-
 	/**
 	 * @param \IpnForwarder\Format\JsonFormatter $formatter
 	 * @return $this
@@ -54,20 +67,14 @@ class Forwarder {
 	}
 
 	/**
-	 * @param array $urls
-	 * @param array $response
+	 * Disable json formatter forwarding IPN data to the following url
+	 * @param $url
+	 * @return $this
 	 */
-	protected function send(array $urls, array $response)
+	public function disableFormatting($url)
 	{
-		$requests = [];
-		$options = ['json' => $response];
-		foreach ($urls as $url)
-		{
-			$request = $this->guzzle->createRequest('post', $url, $options);
-			$request->setHeader($this->customHeader, $this->getKey());
-			$requests[] = $request;
-		}
-		$this->guzzle->sendAll($requests, ['parallel' => $this->maxRequests]);
+		$this->disabledJsonFormatting[] = $url;
+		return $this;
 	}
 
 	/**

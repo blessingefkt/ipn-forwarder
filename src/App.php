@@ -44,7 +44,7 @@ class App extends Container {
 
 			if ($this->ipnProcessor->isValidIpn())
 			{
-				if ($this->ipnForwarder->forwardIpn($ipn))
+				if ($this->ipnForwarder->forwardIpn($ipn, $this->request))
 				{
 					$msg = 'Notified ' . count($ipn->getForwardUrls()) . ' urls.';
 				}
