@@ -1,7 +1,7 @@
 <?php namespace IpnForwarder;
 
 interface IpnSubscriber {
-	public function onValidIpn(IPN $IPN);
+	public function onValidIpn(IpnEntity $IPN);
 
-	public function onInvalidIpn(IPN $IPN);
+	public function onInvalidIpn(IpnEntity $IPN);
 } 

@@ -1,20 +1,32 @@
 <?php
-use IpnForwarder\App;
-
-ini_set('max_execution_time', 0); /* Do not abort with timeouts */
-ini_set('display_errors', 'Off'); /* Do not display any errors to anyone */
+ini_set('max_execution_time', 0);
 date_default_timezone_set('UTC');
 
 $composer = require __DIR__ . '/../vendor/autoload.php';
 
-$app = new App('mytest', __DIR__.'/..');
-App::setInstance($app);
-require __DIR__ . '/../bindings.php';
-
+$app = new IpnForwarder\App('my-ipn-forwarder', __DIR__ . '/..');
 $app->boot();
 
-loadListenersFromFile(app()->path . '/config/listeners.php');
+ini_set('display_errors', 'Off');
 
-$app->run();
+$app->ipnForwarder->setKey($app->getName());
+$app->ipnProcessor->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
+	->skipVerification()
+	->setSandbox();
+
+$app->ipnProcessor->getUrlCollection()->addListener("#INVOICE-([\w-_]+)", [
+	"http://", "https://", "http://",
+]);
+
+try
+{
+	$app->run();
+} catch (\Exception $ex)
+{
+	$app->logException($ex);
+	$app->setErrorResponse($ex->getMessage(), $ex->getCode());
+}
+
+$app->getResponse()->send();
 
 $app->shutdown();

@@ -1,34 +1,21 @@
 <?php
-$app->bindService('paypal', 'PayPal\Ipn\Listener');
-$app->bindService('guzzle', 'Guzzle\Http\Client');
-$app->bindService('files', 'Illuminate\Filesystem\Filesystem');
-$app->bindService('listeners', IpnForwarder\UrlCollection::class);
-$app->bindService('log', 'Monolog\Logger', function ($app)
+$this->bindService('log', 'Monolog\Logger', function ($this)
 {
-	$log = new Monolog\Logger($app->getName());
-	$log->pushHandler(new Monolog\Handler\StreamHandler($app['log_file'], Monolog\Logger::WARNING));
+	$log = new Monolog\Logger($this->getName());
+	$log->pushHandler(new Monolog\Handler\StreamHandler($this['log_file'], Monolog\Logger::WARNING));
 	return $log;
 });
-
-$app->bindService('session.store', SessionHandlerInterface::class, function ($app)
+$this->bindService('request', Illuminate\Http\Request::class, function ($this)
 {
-	return new Illuminate\Session\FileSessionHandler($app['files'], $app['path']);
+	return Illuminate\Http\Request::createFromGlobals();
 });
-
-$app->bindService('session', Illuminate\Session\SessionInterface::class, function ($app)
+$this->bindService('guzzle', GuzzleHttp\Client::class, function ($app)
 {
-	return new Illuminate\Session\Store($app->getName() . '_session', $app['session.store']);
+	$client = new GuzzleHttp\Client();
+	$client->getEmitter()->attach($app->make(IpnForwarder\Guzzle\GuzzleSubscriber::class));
+	return $client;
 });
-$app->bindService('request', Illuminate\Http\Request::class, function ($app)
-{
-	return new Illuminate\Http\Request();
-});
-$app->resolving(Illuminate\Http\Request::class, function ($request, $app)
-{
-	$request->setSession($app['session']);
-	return $request;
-});
-$app->bindService('verifier', PayPal\Ipn\Verifier::class, function ()
-{
-	return new PayPal\Ipn\Verifier\CurlVerifier();
-});
+$this->bindService('paypal', PayPal\Ipn\Listener::class);
+$this->bindService('listeners', IpnForwarder\UrlCollection::class);
+$this->bindService('ipnForwarder', IpnForwarder\Forwarder::class);
+$this->bindService('ipnProcessor', IpnForwarder\Processor::class);

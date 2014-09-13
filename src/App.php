@@ -1,71 +1,65 @@
 <?php namespace IpnForwarder;
 
 use Illuminate\Container\Container;
+use Illuminate\Support\Facades\Response;
 use PayPal\Ipn\Message;
 use PayPal\Ipn\Verifier;
 
 /**
  * Class App
  * @package IpnListener
- * @property \Illuminate\Filesystem\Filesystem $files
- * @property \PayPal\Ipn\Listener $paypal
- * @property \Guzzle\Http\Client $guzzle
- * @property \IpnForwarder\UrlCollection $listeners
- * @property \Monolog\Logger $log
- * @property \PayPal\Ipn\Verifier $verifier
- * @property array|\IpnForwarder\IpnSubscriber[] $subscribers
- * @property \Illuminate\Http\Request request
  */
 class App extends Container {
-	/** @var  App */
-	protected static $instance;
-	/**
-	 * @var
-	 */
+	/** @var string */
 	private $name;
-
+	/** @var  array */
+	private $response = [];
 
 	public function __construct($name, $path, $logFile = 'logs/ipn-forwarder.log')
 	{
 		$this->name = $name;
 		$this->instance('path', rtrim($path, DIRECTORY_SEPARATOR));
 		$this->instance('log_file', $path . DIRECTORY_SEPARATOR . $logFile);
-		$this->instance('subscribers', []);
 	}
-
 
 	public function boot()
 	{
-		$this->paypal->setVerifier($this->verifier);
+		require __DIR__ . '/../bindings.php';
 	}
 
-	public function addSubscriber(IpnSubscriber $subscriber)
-	{
-		$this->subscribers[] = $subscriber;
-	}
-
+	/**
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
 	public function run()
 	{
-		$ipn = $this->getIpnResponse();
-		$this->paypal->listen(function () use ($ipn)
+		if (!$this->request->isMethod('post'))
 		{
-			if ($urls = $this->listeners->findListeners($ipn->invoice))
+			$this->response = ['status' => 'error', 'msg' => 'invalid request method'];
+		}
+		else
+		{
+			$msg = new Message($this->request->query());
+			/** @var IpnEntity $ipn */
+			$ipn = $this->ipnProcessor->processRequest($msg);
+
+			if ($this->ipnProcessor->isValidIpn())
 			{
-				foreach ($this->subscribers as $subscriber)
-					$subscriber->onValidIpn($ipn);
-				$this->notifyListeners($ipn, $urls, $this->listeners->getMatchedParts());
-				$this->log->addInfo('Notified ' . count($urls) . ' urls.', [$ipn->invoice, $this->request->url()]);
+				if ($this->ipnForwarder->forwardIpn($ipn))
+				{
+					$msg = 'Notified ' . count($ipn->getForwardUrls()) . ' urls.';
+				}
+				else
+				{
+					$msg = 'No listener was found';
+				}
+				$this->response = ['status' => 'ok', 'msg' => $msg];
 			}
 			else
 			{
-				$this->log->addDebug('No listener was found', [$ipn->invoice, $this->request->url()]);
+				$this->response = ['status' => 'ok', 'msg' => 'IpnEntity is invalid'];
 			}
-		}, function () use ($ipn)
-		{
-			$this->log->addError('IPN is invalid', [$ipn->invoice, $this->request->url()]);
-			foreach ($this->subscribers as $subscriber)
-				$subscriber->onInvalidIpn($ipn);
-		});
+		}
+		return $this->getResponse();
 	}
 
 	public function shutdown()
@@ -73,80 +67,31 @@ class App extends Container {
 		exit();
 	}
 
-	protected function notifyMany($urls)
-	{
-		$this->assertAppName();
-	}
-
-	public function setSandbox()
-	{
-		$this->verifier->setEnvironment(Verifier::SANDBOX_HOST);
-	}
-
-	public function setProduction()
-	{
-		$this->verifier->setEnvironment(Verifier::PRODUCTION_HOST);
-	}
-
-	public function getEnvironment()
-	{
-		return $this->verifier->getEnvironment();
-	}
-
-	protected function assertAppName()
-	{
-		if (empty($this->name))
-		{
-			throw new Exception('Please set the application\'s name.');
-		}
-	}
-
 	/**
-	 * @param $urls
+	 * @param $msg
+	 * @param int $code
 	 */
-	public function notifyListeners(IPN $ipn, array $urls, array $parts = [])
+	public function setErrorResponse($msg, $code = 400)
 	{
-		$this->assertAppName();
-		$requestData = [
-			'service' => $this->getName(),
-			'source' => $this->request->url(),
-			'request' => [
-				'url' => $this->request->url(),
-				'method' => $this->request->method(),
-				'headers' => $this->request->headers->all()
-			],
-			'matches' => $parts,
-			'ipn' => $ipn->toArray(),
-			'timestamp' => time()
+		$this->response = [
+			'status' => 'error',
+			'msg' => $msg,
+			'code' => $code
 		];
-		$requests = $this->makeGuzzleRequests($urls, $requestData);
-		$this->guzzle->send($requests);
+	}
+
+	public function logException(\Exception $ex)
+	{
+		$this['log']->error($ex->getMessage() . ' -- ' . $ex->getTraceAsString(),
+			[$ex->getCode(), $ex->getLine(), $ex->getFile()]);
 	}
 
 	/**
-	 * @return IPN
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function getIpnResponse()
+	public function getResponse()
 	{
-		$msg = Message::createFromGlobals();
-		$this->verifier->setIpnMessage($msg);
-		return new IPN($msg);
-	}
-
-	/**
-	 * @param array $urls
-	 * @param array $ipnData
-	 * @return array|\Guzzle\Http\Message\RequestInterface[]
-	 */
-	public function makeGuzzleRequests(array $urls, array $ipnData)
-	{
-		$requests = [];
-		$requestBody = ['json' => $ipnData];
-		foreach ($urls as $url)
-		{
-			$requests[] = $this->guzzle->post($url, $requestBody);
-		}
-		return $requests;
+		return Response::json($this->response);
 	}
 
 	/**
@@ -176,25 +121,17 @@ class App extends Container {
 		$this->alias($abstract, $alias);
 	}
 
+
+	protected function assertAppName()
+	{
+		if (empty($this->name))
+		{
+			throw new Exception('Please set the application\'s name.');
+		}
+	}
+
 	public function __get($name)
 	{
 		return $this->make($name);
-	}
-
-
-	/**
-	 * @return App
-	 */
-	public static function getInstance()
-	{
-		return self::$instance;
-	}
-
-	/**
-	 * @param App $instance
-	 */
-	public static function setInstance(App $instance)
-	{
-		self::$instance = $instance;
 	}
 }

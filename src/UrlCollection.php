@@ -2,18 +2,48 @@
 
 class UrlCollection {
 	/** @var  array */
-	private $listeners = [];
+	private $forwardUrls = [];
 	protected $globalListeners = [];
 	private $matchedParts;
 
-	public function addGlobalListener($url)
+	/**
+	 * @param array $urls
+	 * @return $this
+	 */
+	public function setGlobalListeners(array $urls)
 	{
-		$this->globalListeners[] = $url;
+		$this->globalListeners = $urls;
+		return $this;
 	}
 
+	/**
+	 * @param string|array $url
+	 * @return $this
+	 */
+	public function addGlobalListener($url)
+	{
+		$urls = is_array($url) ? $url : func_get_args();
+		$this->globalListeners = array_merge($this->globalListeners, $urls);
+		return $this;
+	}
+
+	/**
+	 * @param $invoicePattern
+	 * @param string|array $url
+	 * @return $this
+	 */
 	public function addListener($invoicePattern, $url)
 	{
-		$this->listeners[$invoicePattern][] = $url;
+		$urls = is_array($url) ? $url : [$url];
+		if (isset($this->forwardUrls[$invoicePattern]))
+		{
+			$this->forwardUrls[$invoicePattern] = array_merge($this->forwardUrls[$invoicePattern], $urls);
+		}
+		else
+		{
+			$this->forwardUrls[$invoicePattern] = $urls;
+		}
+		return $this;
 	}
 
 	/**
@@ -23,10 +53,9 @@ class UrlCollection {
 	public function findListeners($invoiceId)
 	{
 		$this->matchedParts = [];
-		foreach ($this->listeners as $invoicePattern => $listeners)
+		foreach ($this->forwardUrls as $invoicePattern => $listeners)
 		{
-			$_parts = [];
-			if (preg_match("&{$invoicePattern}&", $invoiceId, $_parts))
+			if ($this->patternMatches($invoicePattern, $invoiceId, $_parts))
 			{
 				$this->matchedParts = $_parts;
 				return array_merge($this->globalListeners, $listeners);
@@ -35,24 +64,26 @@ class UrlCollection {
 		return false;
 	}
 
-	public function addListenerGroup($invoicePattern, array $urls)
-	{
-		if (isset($this->listeners[$invoicePattern]))
-		{
-			$this->listeners[$invoicePattern] = array_merge($this->listeners[$invoicePattern], $urls);
-		}
-		else
-		{
-			$this->listeners[$invoicePattern] = $urls;
-		}
-	}
-
 	/**
 	 * @return array
 	 */
 	public function getMatchedParts()
 	{
 		return $this->matchedParts;
+	}
+
+	/**
+	 * @param $invoicePattern
+	 * @param $invoiceId
+	 * @param null $_parts
+	 * @return int
+	 */
+	protected function patternMatches($invoicePattern, $invoiceId, &$_parts = null)
+	{
+		$pattern = sprintf('/%s/', $invoicePattern);
+		$result = preg_match($pattern, $invoiceId, $_parts);
+		array_shift($_parts);
+		return $result == 1;
 	}
 
 } 

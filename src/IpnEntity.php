@@ -2,9 +2,16 @@
 
 
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use PayPal\Ipn\Message;
 
-class IPN implements Arrayable {
+class IpnEntity implements Arrayable, Jsonable, \JsonSerializable {
+	/** @var  string */
+	protected $report;
+	/** @var array */
+	protected $invoiceForwardUrls = [];
+	/** @var array */
+	protected $invoiceIdMatches = [];
 	/** @var string */
 	public $address_city;
 	/** @var string */
@@ -80,13 +87,15 @@ class IPN implements Arrayable {
 
 	/**
 	 * @param Message $message
+	 * @param string $report
 	 */
-	public function __construct(Message $message)
+	public function __construct(Message $message, $report = null)
 	{
 		foreach ($message as $prop => $value)
 		{
 			$this->{$prop} = $value;
 		}
+		$this->report = $report;
 	}
 
 	public function toArray()
@@ -129,4 +138,71 @@ class IPN implements Arrayable {
 			'residence_country' => $this->residence_country
 		];
 	}
-} 
+
+	/**
+	 * @param array $urls
+	 * @return $this
+	 */
+	public function setForwardUrls(array $urls)
+	{
+		$this->invoiceForwardUrls = $urls;
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getForwardUrls()
+	{
+		return $this->invoiceForwardUrls;
+	}
+
+	/**
+	 * @param array $matches
+	 * @return $this
+	 */
+	public function setInvoiceMatches(array $matches)
+	{
+		$this->invoiceIdMatches = $matches;
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getInvoiceMatches()
+	{
+		return $this->invoiceIdMatches;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getReport()
+	{
+		return $this->report;
+	}
+
+	/**
+	 * Convert the object to its JSON representation.
+	 *
+	 * @param  int $options
+	 * @return string
+	 */
+	public function toJson($options = 0)
+	{
+		return json_encode($this->jsonSerialize(), $options);
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.4.0)<br/>
+	 * Specify data which should be serialized to JSON
+	 * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
+	 * @return mixed data which can be serialized by <b>json_encode</b>,
+	 * which is a value of any type other than a resource.
+	 */
+	public function jsonSerialize()
+	{
+		return $this->toArray();
+	}
+}
