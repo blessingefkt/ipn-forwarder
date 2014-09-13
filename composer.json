@@ -2,7 +2,6 @@
     "name": "iyoworks/ipn-forwarder",
     "description": "Filter an IpnEntity response to multiple URLs or Listeners",
     "minimum-stability": "dev",
-    "license": "proprietary",
     "require": {
         "illuminate/container" : "5.0.*",
         "illuminate/http" : "5.0.*",
