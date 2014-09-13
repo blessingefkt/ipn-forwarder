@@ -1,5 +1,5 @@
 <?php
-//ini_set('max_execution_time', 0);
+ini_set('max_execution_time', 0);
 date_default_timezone_set('UTC');
 
 $composer = require __DIR__ . '/../vendor/autoload.php';
@@ -7,7 +7,7 @@ $composer = require __DIR__ . '/../vendor/autoload.php';
 $app = new IpnForwarder\App('my-ipn-forwarder', __DIR__ . '/..');
 $app->boot();
 
-//ini_set('display_errors', 'Off');
+ini_set('display_errors', 'Off');
 
 $app->ipnForwarder->setKey($app->getName());
 $app->ipnProcessor->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
@@ -15,9 +15,9 @@ $app->ipnProcessor->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
 	->setSandbox();
 
 $app->ipnProcessor->getUrlCollection()->addListener(".*", [
-	'http://tespa.iyoworks.ngrok.com/webhooks/6neZDFUKWJTusMyvJQ/paypal'
+	'http://'
 ]);
-//$app->ipnForwarder->disableFormatting('http://tespa.iyoworks.ngrok.com/webhooks/6neZDFUKWJTusMyvJQ/paypal');
+
 try
 {
 	$app->run();
