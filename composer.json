@@ -1,17 +1,18 @@
 {
     "name": "iyoworks/ipn-forwarder",
-    "description": "Filter an IpnEntity response to multiple URLs or Listeners",
+    "description": "Filter a Paypal IPN response to multiple URLs or Listeners",
+    "keywords": ["paypal", "ipn", "multiple"],
     "minimum-stability": "dev",
     "require": {
-        "illuminate/container" : "5.0.*",
-        "illuminate/http" : "5.0.*",
-        "guzzlehttp/guzzle" : "4.*",
+        "illuminate/container": "5.0.*",
+        "illuminate/http": "5.0.*",
+        "guzzlehttp/guzzle": "4.*",
         "mike182uk/paypal-ipn-listener": "2.*",
-        "monolog/monolog" : "1.*"
+        "monolog/monolog": "1.*"
     },
-    "autoload":{
-        "psr-4" : {
-            "IpnForwarder\\" : "src"
+    "autoload": {
+        "psr-4": {
+            "IpnForwarder\\": "src"
         }
     },
     "authors": [
