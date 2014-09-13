@@ -1,0 +1,29 @@
+{
+    "name": "iyoworks/ipn-forwarder",
+    "description": "Filter an IPN response to multiple URLs or Listeners",
+    "minimum-stability": "dev",
+    "license": "proprietary",
+    "require": {
+        "illuminate/container" : "5.0.*",
+        "illuminate/filesystem" : "5.0.*",
+        "illuminate/http" : "5.0.*",
+        "guzzle/guzzle" : "*",
+        "mike182uk/paypal-ipn-listener": "2.*",
+        "monolog/monolog" : "1.*"
+    },
+    "autoload":{
+        "psr-4" : {
+            "IpnForwarder\\" : "src"
+        },
+        "files" :
+        [
+            "helpers.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Blessing Osakue",
+            "email": "iyoworks@gmail.com"
+        }
+    ]
+}
