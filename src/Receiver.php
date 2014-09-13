@@ -1,12 +1,4 @@
-<?php
-/**
- * Created by PhpStorm.
- * User: iyo
- * Date: 9/13/14
- * Time: 12:44 PM
- */
-
-namespace IpnForwarder;
+<?php namespace IpnForwarder;
 
 use Illuminate\Http\Request;
 use Monolog\Logger;
