@@ -43,7 +43,7 @@ class GuzzleSubscriber implements SubscriberInterface {
 		];
 	}
 
-	public function onError(ErrorEvent $event, $name, EmitterInterface $emitter)
+	public function onError(ErrorEvent $event)
 	{
 		$ex = $event->getException();
 		$this->log->error($ex->getMessage() . ' -- ' . $ex->getTraceAsString(),
