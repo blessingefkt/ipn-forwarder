@@ -10,7 +10,7 @@ class Forwarder {
 	/** @var \GuzzleHttp\Client */
 	private $guzzle;
 	/** @var  string */
-	private $customHeader = 'X-IpnEntity-FORWARDER', $key;
+	private $customHeader = 'X-IPN-FORWARDER', $key;
 	/** @var int */
 	protected $maxRequests = 15;
 	/** @var \IpnForwarder\Format\JsonFormatter */
