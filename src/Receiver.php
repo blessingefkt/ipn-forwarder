@@ -28,36 +28,21 @@ class Receiver {
 	 */
 	public function listen(Request $request)
 	{
-		if (!$request->isMethod('post'))
+		$msg = $this->makeMessage($request);
+		/** @var IpnEntity $ipn */
+		$ipn = $this->ipnProcessor->processRequest($msg);
+
+		$logData = [$ipn->invoice, $ipn->txn_id, $ipn->payment_date];
+
+		if ($this->ipnProcessor->isValidIpn())
 		{
-			$response = ['status' => 'error', 'msg' => 'invalid request method'];
-		}
-		else
-		{
-			$msg = $this->makeMessage($request);
-			/** @var IpnEntity $ipn */
-			$ipn = $this->ipnProcessor->processRequest($msg);
-
-			$logData = [$ipn->invoice, $ipn->txn_id, $ipn->payment_date];
-
-			if ($this->ipnProcessor->isValidIpn())
+			if ($this->ipnForwarder->forwardIpn($ipn, $request))
 			{
-				if ($this->ipnForwarder->forwardIpn($ipn, $request))
-				{
-					$response = $this->makeForwardedResponse($logData, $ipn);
-
-				}
-				else
-				{
-					$response = $this->makeNotForwardedResponse($logData, $ipn);
-				}
+				return $this->makeForwardedResponse($logData, $ipn);
 			}
-			else
-			{
-				$response = $this->makeErrorResponse($logData, $ipn);
-			}
+			return $this->makeNotForwardedResponse($logData, $ipn);
 		}
-		return $response;
+		return $this->makeErrorResponse($logData, $ipn);
 	}
 
 	/**
