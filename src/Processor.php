@@ -12,10 +12,6 @@ class Processor {
 	 */
 	private $urlCollection;
 	/**
-	 * @var \Monolog\Logger
-	 */
-	private $log;
-	/**
 	 * @var \PayPal\Ipn\Listener
 	 */
 	private $listener;
@@ -27,10 +23,9 @@ class Processor {
 	/** @var  \PayPal\Ipn\Verifier */
 	private $verifier;
 
-	public function __construct(UrlCollection $urlCollection, \Monolog\Logger $log, Listener $listener)
+	public function __construct(UrlCollection $urlCollection, Listener $listener)
 	{
 		$this->urlCollection = $urlCollection;
-		$this->log = $log;
 		$this->listener = $listener;
 	}
 
@@ -42,23 +37,14 @@ class Processor {
 	{
 		$this->verifier->setIpnMessage($ipnMsg);
 		$ipn = new IpnEntity($ipnMsg, $this->listener->getReport());
-		$logData = [$ipn->invoice, $ipn->txn_id, $ipn->payment_date];
 		$this->validIpn = $this->skipVerification ? true : $this->listener->processIpn();
 		if ($this->validIpn)
 		{
-			if ($urls = $this->respondToValidIpn($ipn))
-			{
-				$this->log->info('IpnEntity forwarded to ' . count($urls) . ' urls.', $logData);
-			}
-			else
-			{
-				$this->log->info('IpnEntity invoice id has 0 matches.', $logData);
-			}
+			$this->respondToValidIpn($ipn);
 		}
 		else
 		{
 			$this->respondToInvalidIpn($ipn);
-			$this->log->alert('IpnEntity invalid', $logData);
 		}
 		return $ipn;
 	}

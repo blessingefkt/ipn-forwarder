@@ -45,13 +45,16 @@ class GuzzleSubscriber implements SubscriberInterface {
 
 	public function onError(ErrorEvent $event)
 	{
-		$ex = $event->getException();
-		$this->log->error($ex->getMessage() . ' -- ' . $ex->getTraceAsString(),
-			[$ex->getCode(), $ex->getLine(), $ex->getFile()]);
 		if ($event->getResponse())
 		{
 			$this->log->error('guzzle_error: ' . $event->getException()->getMessage(),
 				[$event->getResponse()->getEffectiveUrl()]);
+		}
+		else
+		{
+			$ex = $event->getException();
+			$this->log->error($ex->getMessage() . ' -- ' . $ex->getTraceAsString(),
+				[$ex->getCode(), $ex->getLine(), $ex->getFile()]);
 		}
 		$event->stopPropagation();
 	}

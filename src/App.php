@@ -1,13 +1,13 @@
 <?php namespace IpnForwarder;
 
 use Illuminate\Container\Container;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Response;
-use PayPal\Ipn\Message;
 use PayPal\Ipn\Verifier;
 
 /**
  * Class App
- * @package IpnListener
+ * @package Receiver
  */
 class App extends Container {
 	/** @var string */
@@ -24,42 +24,26 @@ class App extends Container {
 
 	public function boot()
 	{
-		require __DIR__ . '/../bindings.php';
-	}
-
-	/**
-	 * @return \Symfony\Component\HttpFoundation\Response
-	 */
-	public function run()
-	{
-		if (!$this->request->isMethod('post'))
+		$this->bindService('log', \Monolog\Logger::class, function ($this)
 		{
-			$this->response = ['status' => 'error', 'msg' => 'invalid request method'];
-		}
-		else
+			$log = new \Monolog\Logger($this->getName());
+			$log->pushHandler(new \Monolog\Handler\StreamHandler($this['log_file'], \Monolog\Logger::DEBUG));
+			return $log;
+		});
+		$this->bindAliased('request', \Illuminate\Http\Request::class, function ($this)
 		{
-			$msg = new Message($this->request->query());
-			/** @var IpnEntity $ipn */
-			$ipn = $this->ipnProcessor->processRequest($msg);
-
-			if ($this->ipnProcessor->isValidIpn())
-			{
-				if ($this->ipnForwarder->forwardIpn($ipn, $this->request))
-				{
-					$msg = 'Notified ' . count($ipn->getForwardUrls()) . ' urls.';
-				}
-				else
-				{
-					$msg = 'No listener was found';
-				}
-				$this->response = ['status' => 'ok', 'msg' => $msg];
-			}
-			else
-			{
-				$this->response = ['status' => 'ok', 'msg' => 'IpnEntity is invalid'];
-			}
-		}
-		return $this->getResponse();
+			return \Illuminate\Http\Request::createFromGlobals();
+		});
+		$this->bindAliased('guzzle', \GuzzleHttp\Client::class, function ($app)
+		{
+			$client = new \GuzzleHttp\Client();
+			$client->getEmitter()->attach($app->make(\IpnForwarder\Guzzle\GuzzleSubscriber::class));
+			return $client;
+		});
+		$this->bindService('paypal', \PayPal\Ipn\Listener::class);
+		$this->bindService('urls', \IpnForwarder\UrlCollection::class);
+		$this->bindService('ipnForwarder', \IpnForwarder\Forwarder::class);
+		$this->bindService('ipnProcessor', \IpnForwarder\Processor::class);
 	}
 
 	public function shutdown()
@@ -70,14 +54,15 @@ class App extends Container {
 	/**
 	 * @param $msg
 	 * @param int $code
+	 * @return \Illuminate\Http\JsonResponse
 	 */
-	public function setErrorResponse($msg, $code = 400)
+	public function makeErrorResponse($msg, $code = 400)
 	{
-		$this->response = [
+		return $this->makeResponse([
 			'status' => 'error',
 			'msg' => $msg,
 			'code' => $code
-		];
+		]);
 	}
 
 	public function logException(\Exception $ex)
@@ -87,11 +72,12 @@ class App extends Container {
 	}
 
 	/**
-	 * @return \Illuminate\Http\JsonResponse
+	 * @param array $data
+	 * @return JsonResponse
 	 */
-	public function getResponse()
+	public function makeResponse(array $data)
 	{
-		return Response::json($this->response);
+		return Response::json($data);
 	}
 
 	/**
@@ -121,6 +107,12 @@ class App extends Container {
 		$this->alias($abstract, $alias);
 	}
 
+
+	public function bindAliased($alias, $abstract, $concrete = null)
+	{
+		$this->bind($abstract, $concrete);
+		$this->alias($abstract, $alias);
+	}
 
 	protected function assertAppName()
 	{
