@@ -1,12 +1,15 @@
 <?php namespace IpnForwarder\Format;
 
 
-use Illuminate\Http\Request;
 use IpnForwarder\IpnEntity;
 
 class SimpleFormatter implements JsonFormatter {
+	/**
+	 * @var  \Illuminate\Http\Request
+	 */
+	protected $httpRequest;
 
-	public function formatJsonResponse(IpnEntity $ipn, Request $request = null)
+	public function formatJsonResponse(IpnEntity $ipn)
 	{
 		$response = [
 			'status' => 'ok',
@@ -19,16 +22,33 @@ class SimpleFormatter implements JsonFormatter {
 				'timestamp' => time()
 			]
 		];
-		if ($request)
+		if ($this->httpRequest)
 		{
-			$response['data']['original_headers'] = $request->headers->all();
-			$response['data']['request'] = [
-				'url' => $request->url(),
-				'host' => $request->getHost(),
-				'method' => $request->method(),
-				'scheme' => $request->getScheme()
-			];
+			$response['data'] = $this->setRequestData($response['data']);
 		}
 		return $response;
+	}
+
+	/**
+	 * @param \Illuminate\Http\Request $httpRequest
+	 */
+	public function setRequest($httpRequest)
+	{
+		$this->httpRequest = $httpRequest;
+	}
+
+	/**
+	 * @param $data
+	 * @return array
+	 */
+	protected function setRequestData(array $data)
+	{
+		$data['original_headers'] = $this->httpRequest->headers->all();
+		$data['request'] = [
+			'host' => $this->httpRequest->getHost(),
+			'method' => $this->httpRequest->method(),
+			'scheme' => $this->httpRequest->getScheme()
+		];
+		return $data;
 	}
 }

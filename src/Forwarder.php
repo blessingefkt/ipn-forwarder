@@ -2,9 +2,7 @@
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Stream\Stream;
-use Illuminate\Http\Request;
 use IpnForwarder\Format\JsonFormatter;
-use IpnForwarder\Format\SimpleFormatter;
 
 class Forwarder {
 	/** @var \GuzzleHttp\Client */
@@ -21,15 +19,13 @@ class Forwarder {
 	public function __construct(Client $guzzle)
 	{
 		$this->guzzle = $guzzle;
-		$this->formatter = new SimpleFormatter();
 	}
 
 	/**
 	 * @param IpnEntity $ipn
-	 * @param \Illuminate\Http\Request $httpRequest
 	 * @return bool
 	 */
-	public function forwardIpn(IpnEntity $ipn, Request $httpRequest = null)
+	public function forwardIpn(IpnEntity $ipn)
 	{
 		$urls = $ipn->getForwardUrls();
 		if (!empty($urls))
@@ -38,6 +34,7 @@ class Forwarder {
 			foreach ($urls as $url)
 			{
 				$request = $this->guzzle->createRequest('post', $url);
+				$request->setHeader($this->customHeader, $this->getKey());
 				if (in_array($url, $this->disabledJsonFormatting))
 				{
 					$request->getQuery()->merge($ipn->toArray());
@@ -45,10 +42,16 @@ class Forwarder {
 				else
 				{
 					$request->setHeader('content-type', 'application/json');
-					$response = $this->formatter->formatJsonResponse($ipn, $httpRequest);
+					if ($this->formatter)
+					{
+						$response = $this->formatter->formatJsonResponse($ipn);
+					}
+					else
+					{
+						$response = ['ipn' => $ipn->toArray()];
+					}
 					$request->setBody(Stream::factory(json_encode($response)));
 				}
-				$request->setHeader($this->customHeader, $this->getKey());
 				$requests[] = $request;
 			}
 			$this->guzzle->sendAll($requests, ['parallel' => $this->maxRequests]);
@@ -56,6 +59,7 @@ class Forwarder {
 		}
 		return false;
 	}
+
 	/**
 	 * @param \IpnForwarder\Format\JsonFormatter $formatter
 	 * @return $this
@@ -64,6 +68,14 @@ class Forwarder {
 	{
 		$this->formatter = $formatter;
 		return $this;
+	}
+
+	/**
+	 * @return \IpnForwarder\Format\JsonFormatter
+	 */
+	public function getFormatter()
+	{
+		return $this->formatter;
 	}
 
 	/**

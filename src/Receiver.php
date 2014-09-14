@@ -1,6 +1,5 @@
 <?php namespace IpnForwarder;
 
-use Illuminate\Http\Request;
 use Monolog\Logger;
 use PayPal\Ipn\Message;
 
@@ -22,13 +21,18 @@ class Receiver {
 		$this->ipnForwarder = $ipnForwarder;
 	}
 
+	public static function makeMessage(array $data)
+	{
+		$msg = new Message($data);
+		return $msg;
+	}
+
 	/**
-	 * @param \Illuminate\Http\Request $request
+	 * @param \PayPal\Ipn\Message $msg
 	 * @return array
 	 */
-	public function listen(Request $request)
+	public function listen(Message $msg)
 	{
-		$msg = $this->makeMessage($request);
 		/** @var IpnEntity $ipn */
 		$ipn = $this->ipnProcessor->processRequest($msg);
 
@@ -36,23 +40,13 @@ class Receiver {
 
 		if ($this->ipnProcessor->isValidIpn())
 		{
-			if ($this->ipnForwarder->forwardIpn($ipn, $request))
+			if ($this->ipnForwarder->forwardIpn($ipn))
 			{
 				return $this->makeForwardedResponse($logData, $ipn);
 			}
 			return $this->makeNotForwardedResponse($logData, $ipn);
 		}
 		return $this->makeErrorResponse($logData, $ipn);
-	}
-
-	/**
-	 * @param Request $request
-	 * @return Message
-	 */
-	protected function makeMessage(Request $request)
-	{
-		$msg = new Message($request->query());
-		return $msg;
 	}
 
 	/**

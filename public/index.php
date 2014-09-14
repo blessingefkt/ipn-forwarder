@@ -12,11 +12,15 @@ $app->boot();
 /** @var IpnForwarder\Receiver $receiver */
 $receiver = $app->make(IpnForwarder\Receiver::class);
 
-$receiver->forwarder()->setKey($app->getName());
+$receiver->setLogger($app->log);
 $receiver->processor()->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
 	->skipVerification()
 	->setSandbox();
-$receiver->setLogger($app->log);
+$receiver->forwarder()->setKey($app->getName());
+
+$formatter = new IpnForwarder\Format\SimpleFormatter();
+$formatter->setRequest($app->request);
+$receiver->forwarder()->setFormatter($formatter);
 
 $receiver->processor()->getUrlCollection()->addListener(".*", [
 	'http://'
@@ -24,7 +28,8 @@ $receiver->processor()->getUrlCollection()->addListener(".*", [
 
 try
 {
-	$response = $receiver->listen($app->request);
+	$message = IpnForwarder\Receiver::makeMessage($app->request->query());
+	$response = $receiver->listen($message);
 	$app->makeResponse($response)->send();
 } catch (\Exception $ex)
 {
