@@ -47,8 +47,7 @@ class GuzzleSubscriber implements SubscriberInterface {
 	{
 		if ($event->getResponse())
 		{
-			$this->log->error('guzzle_error: ' . $event->getException()->getMessage(),
-				[$event->getResponse()->getEffectiveUrl()]);
+			$this->log->error('guzzle_error: ' . $event->getException()->getMessage());
 		}
 		else
 		{
