@@ -58,7 +58,7 @@ class UrlCollection {
 			if ($this->patternMatches($invoicePattern, $invoiceId, $_parts))
 			{
 				$this->matchedParts = $_parts;
-				return array_merge($this->globalListeners, $listeners);
+				return array_unique(array_merge($this->globalListeners, $listeners));
 			}
 		}
 		return false;
