@@ -12,8 +12,6 @@ use PayPal\Ipn\Verifier;
 class App extends Container {
 	/** @var string */
 	private $name;
-	/** @var  array */
-	private $response = [];
 
 	public function __construct($name, $path, $logFile = 'logs/ipn-forwarder.log')
 	{

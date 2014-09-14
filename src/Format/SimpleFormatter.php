@@ -19,7 +19,7 @@ class SimpleFormatter implements JsonFormatter {
 				'transaction_type' => $ipn->txn_type,
 				'matches' => $ipn->getInvoiceMatches(),
 				'ipn' => $ipn->jsonSerialize(),
-				'timestamp' => time()
+				'timestamp' => date('Y-m-d h:i:s', time())
 			]
 		];
 		if ($this->httpRequest)

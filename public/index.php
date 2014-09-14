@@ -13,15 +13,17 @@ $app->boot();
 $receiver = $app->make(IpnForwarder\Receiver::class);
 
 $receiver->setLogger($app->log);
-$receiver->processor()->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
-	->skipVerification()
-	->setSandbox();
-$receiver->forwarder()->setKey($app->getName());
 
+
+$receiver->forwarder()->setKey($app->getName());
 $formatter = new IpnForwarder\Format\SimpleFormatter();
 $formatter->setRequest($app->request);
 $receiver->forwarder()->setFormatter($formatter);
 
+
+$receiver->processor()->setVerifier(new PayPal\Ipn\Verifier\CurlVerifier())
+	->skipVerification()
+	->setSandbox();
 $receiver->processor()->getUrlCollection()->addListener(".*", [
 	'http://'
 ]);
