@@ -14,7 +14,6 @@ $receiver = $app->make(IpnForwarder\Receiver::class);
 
 $receiver->setLogger($app->log);
 
-
 $receiver->forwarder()->setKey($app->getName());
 $formatter = new IpnForwarder\Format\SimpleFormatter();
 $formatter->setRequest($app->request);

@@ -146,4 +146,12 @@ class Processor {
 		$this->skipVerification = (bool)$value;
 		return $this;
 	}
+
+	/**
+	 * @return boolean
+	 */
+	public function isSkippingVerification()
+	{
+		return $this->skipVerification;
+	}
 } 
